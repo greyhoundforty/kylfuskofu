@@ -22,7 +22,7 @@ pytest==8.3.5
 pytest-mock==3.14.0
 pyyaml==6.0.2
 requests==2.32.3
-tamga==0.1.12
+tamga==0.1.13
 typing-extensions==4.12.2
 urllib3==2.3.0
 virtualenv==20.29.3
