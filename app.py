@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+# Author: Ryan Tiffany
+# Copyright (c) 2025 Ryan Tiffany
 import os
 import json
 import time
