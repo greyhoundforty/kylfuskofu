@@ -1,8 +1,11 @@
 import os
-import sqlite3
 import json
 import time
 import httpx
+import psycopg2
+import psycopg2.extras
+import base64
+import tempfile
 from tamga import Tamga
 from datetime import datetime, date
 from playwright.sync_api import sync_playwright
@@ -10,82 +13,167 @@ from playwright.sync_api import sync_playwright
 # Configure tamga logger, will set console to false after testing
 logger = Tamga(logToJSON=True, logToConsole=True)
 
+# Remove SQLite-specific code since we're moving to PostgreSQL
 
-# had to add these functions to handle datetime conversion properly in updated sqlite3
-def adapt_datetime(dt):
-    return dt.isoformat()
+def get_connection_details():
+    """Extract PostgreSQL connection details from environment variable."""
+    connection_json = os.environ.get("PSQL_CONNECTION")
+    if not connection_json:
+        logger.error("PSQL_CONNECTION environment variable not set")
+        raise ValueError("PSQL_CONNECTION environment variable not set")
+    
+    try:
+        connection_info = json.loads(connection_json)
+        
+        # Extract connection parameters from the postgres section
+        postgres_info = connection_info.get("postgres", {})
+        uri_info = postgres_info.get("hosts", [{}])[0]
+        auth_info = postgres_info.get("authentication", {})
+        
+        # Build connection parameters
+        db_params = {
+            "dbname": postgres_info.get("database", ""),
+            "user": auth_info.get("username", ""),
+            "password": auth_info.get("password", ""),
+            "host": uri_info.get("hostname", ""),
+            "port": uri_info.get("port", 5432),
+            "sslmode": postgres_info.get("query_options", {}).get("sslmode", "verify-full")
+        }
+        
+        # Get SSL certificate
+        cert_base64 = postgres_info.get("certificate", {}).get("certificate_base64", "")
+        
+        return db_params, cert_base64
+    except (json.JSONDecodeError, KeyError) as e:
+        logger.error(f"Error parsing PSQL_CONNECTION: {str(e)}")
+        raise ValueError(f"Invalid PSQL_CONNECTION format: {str(e)}")
 
+def setup_ssl_cert(cert_base64):
+    """Setup SSL certificate for PostgreSQL connection."""
+    if not cert_base64:
+        logger.error("SSL certificate not found in connection details")
+        raise ValueError("SSL certificate not found in connection details")
+        
+    cert_file = tempfile.NamedTemporaryFile(delete=False, suffix=".crt")
+    cert_file.write(base64.b64decode(cert_base64))
+    cert_file.close()
+    
+    # Store the path for future use
+    os.environ["PG_CERT_PATH"] = cert_file.name
+    logger.debug(f"SSL certificate saved to {cert_file.name}")
+    return cert_file.name
 
-def convert_datetime(s):
-    return datetime.fromisoformat(s)
-
-
-sqlite3.register_adapter(datetime, adapt_datetime)
-sqlite3.register_converter("TIMESTAMP", convert_datetime)
-
+def get_db_connection():
+    """Get a connection to PostgreSQL database using environment variables."""
+    # Get certificate path from environment or create new one
+    cert_path = os.environ.get("PG_CERT_PATH")
+    
+    try:
+        db_params, cert_base64 = get_connection_details()
+        
+        if not cert_path and cert_base64:
+            cert_path = setup_ssl_cert(cert_base64)
+            
+        # Add SSL certificate path to connection parameters
+        if cert_path:
+            db_params["sslrootcert"] = cert_path
+            
+        # Connect to database
+        conn = psycopg2.connect(**db_params)
+        return conn
+    except Exception as e:
+        logger.error(f"Database connection error: {str(e)}")
+        raise
 
 def init_database():
-    """Initialize the SQLite database if it doesn't exist."""
+    """Initialize the PostgreSQL database if tables don't exist."""
     logger.debug("Initializing database")
-    conn = sqlite3.connect("random_sites.db", detect_types=sqlite3.PARSE_DECLTYPES)
+    conn = get_db_connection()
     cursor = conn.cursor()
     
     # Check if the table exists
-    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='sites'")
-    table_exists = cursor.fetchone() is not None
+    cursor.execute("""
+        SELECT EXISTS (
+            SELECT FROM information_schema.tables 
+            WHERE table_schema = 'public' 
+            AND table_name = 'sites'
+        )
+    """)
+    table_exists = cursor.fetchone()[0]
     
     if not table_exists:
-        cursor.execute(
-            """
-        CREATE TABLE sites (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            url TEXT UNIQUE,
-            title TEXT,
-            source TEXT,
-            capture_date TIMESTAMP
-        )
-        """
-        )
+        cursor.execute("""
+            CREATE TABLE sites (
+                id SERIAL PRIMARY KEY,
+                url TEXT UNIQUE,
+                title TEXT,
+                source TEXT,
+                capture_date TIMESTAMP
+            )
+        """)
+        logger.debug("Created sites table")
     else:
         # Check if source column exists
-        cursor.execute("PRAGMA table_info(sites)")
-        columns = cursor.fetchall()
-        column_names = [col[1] for col in columns]
+        cursor.execute("""
+            SELECT EXISTS (
+                SELECT FROM information_schema.columns 
+                WHERE table_schema = 'public' 
+                AND table_name = 'sites' 
+                AND column_name = 'source'
+            )
+        """)
+        source_column_exists = cursor.fetchone()[0]
         
         # Add source column if it doesn't exist
-        if "source" not in column_names:
+        if not source_column_exists:
             cursor.execute("ALTER TABLE sites ADD COLUMN source TEXT")
             # Set default source for existing entries
             cursor.execute("UPDATE sites SET source = '512kb.club' WHERE source IS NULL")
+            logger.debug("Added source column to sites table")
     
     conn.commit()
+    cursor.close()
     conn.close()
     logger.debug("Database initialized successfully")
 
-
 def url_exists(url):
     """Check if a URL already exists in the database."""
-    conn = sqlite3.connect("random_sites.db", detect_types=sqlite3.PARSE_DECLTYPES)
+    conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT 1 FROM sites WHERE url = ?", (url,))
+    cursor.execute("SELECT 1 FROM sites WHERE url = %s", (url,))  # Using %s for PostgreSQL
     exists = cursor.fetchone() is not None
+    cursor.close()
     conn.close()
     return exists
 
-
 def add_url_to_db(url, title, source):
     """Add a URL to the database with current timestamp and source."""
-    conn = sqlite3.connect("random_sites.db", detect_types=sqlite3.PARSE_DECLTYPES)
+    conn = get_db_connection()
     cursor = conn.cursor()
     now = datetime.now()
     cursor.execute(
-        "INSERT INTO sites (url, title, source, capture_date) VALUES (?, ?, ?, ?)",
-        (url, title, source, now),
+        "INSERT INTO sites (url, title, source, capture_date) VALUES (%s, %s, %s, %s)",
+        (url, title, source, now)
     )
     conn.commit()
+    cursor.close()
     conn.close()
     logger.info(f"Added to database: {url} - {title} from {source}")
 
+def test_db_connection():
+    """Test if the database connection is working."""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT version()")
+        version = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        logger.info(f"Database connection successful. PostgreSQL version: {version[0]}")
+        return True
+    except Exception as e:
+        logger.error(f"Database connection error: {str(e)}")
+        return False
 
 def get_random_site():
     """Get a random site from 512kb.club and return its URL and title."""
@@ -224,7 +312,7 @@ def collect_ten_unique_sites():
                     
                 if not url_exists(url):
                     add_url_to_db(url, title, source)
-                    collected_sites.append((url, title, source))  # Include source
+                    collected_sites.append((url, title, source))  
                     unique_sites_collected += 1
                 else:
                     logger.info(f"Site already in database: {url}")
