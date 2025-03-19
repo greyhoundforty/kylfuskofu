@@ -24,7 +24,6 @@ RUN apt-get update && apt-get install -y \
     libxss1 \
     libxtst6 \
     libgtk-3-0 \
-    libgdk-3-0 \
     libgdk-pixbuf-2.0-0 \
     libpangocairo-1.0-0 \
     libcairo-gobject2 \
