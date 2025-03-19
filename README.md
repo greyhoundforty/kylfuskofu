@@ -1,18 +1,73 @@
 # kylfusköfu (Icelandic for "club scraper")
 
-A Python tool that collects random websites from 512kb.club and delivers them as a Discord webhook every morning.
+## Overview
 
-## But why?
+This application collects random websites from multiple sources (indieblog.page and 512kb.club), stores them in a SQLite database, and syncs the database with IBM Cloud Object Storage. It also sends notifications to a Discord webhook with clickable links to the discovered sites.
+
+![kylfusköfu in action](https://images.gh40-dev.systems/Capto_Capture-2025-03-19_12-43-20_PM.png)
+
+### But why?
 
 Fair question. I am building this little tool for a few reasons:
 
 - I learn best when I have a problem to solve and I am trying to learn more python in 2025. Two birds, one stone.
-- I love the concept of https://512kb.club/ but visiting the site and clicking the `Visit Random Site` button 20-30 times a day is annoying
-- While not all sites are going to be up my alley or even in my native language, I want a way to discover more people and information outside of the traditional social media sites
-- I want more data coming into my RSS reader and I am looking for ways to aggregate content and provide myself with more tailored feeds
+- I love the concept of sites like https://512kb.club/ and indieblog.page, but visiting the site and clicking the `Random Site` button 20-30 times a day is annoying.
+- While not all sites are going to be up my alley or even in my native language, I want a way to discover more people and information outside of the traditional social media sites.
+- I want more data coming into my RSS reader and I am looking for ways to aggregate content and provide myself with more tailored feeds.
 
-## Current Status
+### Current Status
 
 - [x] It scrapes!
-- [ ] It runs on a schedule
-- [ ] It sends a webhook
+- [x] It runs on a schedule
+- [x] It sends a webhook
+
+### Future Plans
+- [ ] Add more sources
+
+## Testing Locally
+
+### Prerequisites
+
+- Python 3.8+
+- Docker (for containerized deployment)
+- IBM Cloud account (for Object Storage)
+- Discord webhook URL (for notifications)
+
+### Setup
+
+1. Clone the repository
+
+```bash
+git clone https://github.com/greyhoundforty/kylfuskofu
+cd kylfuskofu
+```
+
+2. Create a virtual environment
+
+```bash
+python3 -m venv venv
+source venv/bin/activate
+```
+
+3. Install the dependencies
+
+```bash
+pip install -r requirements.txt
+playwright install chromium
+```
+
+4. Ensure environment variables are set:
+
+```bash
+export COS_ENDPOINT=<your-cos-endpoint>
+export COS_API_KEY=<your-cos-api-key>
+export COS_INSTANCE_CRN=<your-cos-instance-crn>
+export COS_BUCKET_NAME=<your-bucket-name>
+export DISCORD_WEBHOOK_URL=<your-discord-webhook-url>
+```
+
+5. Run the application
+
+```bash
+python cos_random_db.py
+```
