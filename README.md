@@ -22,15 +22,18 @@ Fair question. I am building this little tool for a few reasons:
 - [x] It sends a webhook
 
 ### Future Plans
+
+- [ ] Add Code Engine deployment instructions
 - [ ] Add more sources
+- [ ] Build RSS feed from daily links (possibly hosted on GH)
 
 ## Testing Locally
 
 ### Prerequisites
 
-- Python 3.8+
+- Python 3.12+
 - Docker (for containerized deployment)
-- IBM Cloud account (for Object Storage)
+- IBM Cloud account (for Object Storage / Code Engine)
 - Discord webhook URL (for notifications)
 
 ### Setup
