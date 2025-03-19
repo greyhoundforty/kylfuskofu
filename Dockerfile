@@ -7,11 +7,11 @@ RUN pip install --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
 RUN playwright install
-    
-COPY app.py ./app.py
+
+COPY cos_random_db.py ./cos_random_db.py
 
 # Copy the entrypoint script and make it executable
-RUN chmod +x app.py
+RUN chmod +x cos_random_db.py
 
 # Default command
-ENTRYPOINT [ "./app.py" ]
+ENTRYPOINT [ "./cos_random_db.py" ]
