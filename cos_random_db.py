@@ -15,19 +15,21 @@ logger = Tamga(logToJSON=True, logToConsole=True)
 
 # Constants for IBM COS values
 COS_ENDPOINT = os.getenv("COS_ENDPOINT")
-COS_API_KEY = os.getenv("COS_API_KEY")
-COS_INSTANCE_CRN = os.getenv("COS_INSTANCE_CRN")
+COS_API_KEY = os.getenv("CLOUD_OBJECT_STORAGE_APIKEY")
+COS_INSTANCE_CRN = os.getenv("CLOUD_OBJECT_STORAGE_RESOURCE_INSTANCE_ID")
 DB_FILENAME = "random_sites.db"
-COS_BUCKET_NAME = os.getenv("COS_BUCKET_NAME") 
+COS_BUCKET_NAME = os.getenv("COS_BUCKET_NAME")
 
 
 # Create client
-cos_client = ibm_boto3.client("s3",
+cos_client = ibm_boto3.client(
+    "s3",
     ibm_api_key_id=COS_API_KEY,
     ibm_service_instance_id=COS_INSTANCE_CRN,
     config=Config(signature_version="oauth"),
-    endpoint_url=COS_ENDPOINT
+    endpoint_url=COS_ENDPOINT,
 )
+
 
 # had to add these functions to handle datetime conversion properly in updated sqlite3
 def adapt_datetime(dt):
@@ -47,11 +49,11 @@ def init_database():
     logger.debug("Initializing database")
     conn = sqlite3.connect("random_sites.db", detect_types=sqlite3.PARSE_DECLTYPES)
     cursor = conn.cursor()
-    
+
     # Check if the table exists
     cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='sites'")
     table_exists = cursor.fetchone() is not None
-    
+
     if not table_exists:
         cursor.execute(
             """
@@ -69,13 +71,15 @@ def init_database():
         cursor.execute("PRAGMA table_info(sites)")
         columns = cursor.fetchall()
         column_names = [col[1] for col in columns]
-        
+
         # Add source column if it doesn't exist
         if "source" not in column_names:
             cursor.execute("ALTER TABLE sites ADD COLUMN source TEXT")
             # Set default source for existing entries
-            cursor.execute("UPDATE sites SET source = '512kb.club' WHERE source IS NULL")
-    
+            cursor.execute(
+                "UPDATE sites SET source = '512kb.club' WHERE source IS NULL"
+            )
+
     conn.commit()
     conn.close()
     logger.debug("Database initialized successfully")
@@ -158,6 +162,7 @@ def get_random_indieblog():
         logger.debug(f"Retrieved random site: {random_url}")
         return random_url, title
 
+
 def send_discord_webhook(urls_and_titles):
     """Send a Discord webhook with the collected sites as clickable links.
 
@@ -178,33 +183,37 @@ def send_discord_webhook(urls_and_titles):
     for url, title, source in urls_and_titles:
         if source not in sites_by_source:
             sites_by_source[source] = []
-        
+
         # Clean up title for formatting
-        clean_title = title.replace("[", "\\[").replace("]", "\\]").replace("*", "\\*").replace("_", "\\_")
+        clean_title = (
+            title.replace("[", "\\[")
+            .replace("]", "\\]")
+            .replace("*", "\\*")
+            .replace("_", "\\_")
+        )
         if len(clean_title) > 50:
             clean_title = clean_title[:47] + "..."
-            
+
         sites_by_source[source].append((url, clean_title))
 
     # Format the message with clickable links
     today = date.today().strftime("%Y-%m-%d")
-    
+
     # Create embeds for each source
     embeds = []
-    
+
     for source, sites in sites_by_source.items():
         site_list = "\n".join([f"• [{title}]({url})" for url, title in sites])
-        embeds.append({
-            "title": f"Sites from {source}",
-            "description": site_list,
-            "color": 3447003,  # Discord blue color
-        })
+        embeds.append(
+            {
+                "title": f"Sites from {source}",
+                "description": site_list,
+                "color": 3447003,  # Discord blue color
+            }
+        )
 
     # Create webhook payload
-    payload = {
-        "content": f"📚 **Random sites collection** - {today}",
-        "embeds": embeds
-    }
+    payload = {"content": f"📚 **Random sites collection** - {today}", "embeds": embeds}
 
     # Send webhook using httpx
     try:
@@ -219,10 +228,11 @@ def send_discord_webhook(urls_and_titles):
         logger.error(f"Error sending Discord webhook: {e}")
         return False
 
+
 def download_db_from_cos():
     """Download the SQLite database from IBM Cloud Object Storage if it exists."""
     local_file_path = DB_FILENAME
-    
+
     try:
         # Check if file exists in COS
         try:
@@ -230,31 +240,34 @@ def download_db_from_cos():
             file_exists = True
         except ClientError:
             file_exists = False
-        
+
         if file_exists:
             logger.info(f"Downloading database from COS bucket {COS_BUCKET_NAME}")
             # Download the file
-            with open(local_file_path, 'wb') as f:
+            with open(local_file_path, "wb") as f:
                 cos_client.download_fileobj(COS_BUCKET_NAME, DB_FILENAME, f)
             logger.info(f"Database successfully downloaded to {local_file_path}")
         else:
-            logger.info("Database file does not exist in COS. A new one will be created locally.")
+            logger.info(
+                "Database file does not exist in COS. A new one will be created locally."
+            )
             # Create empty file that will be initialized later
-            open(local_file_path, 'a').close()
-            
+            open(local_file_path, "a").close()
+
         return True
     except Exception as e:
         logger.error(f"Error downloading database from COS: {e}")
         return False
 
+
 def upload_db_to_cos():
     """Upload the SQLite database to IBM Cloud Object Storage."""
     local_file_path = DB_FILENAME
-    
+
     try:
         logger.info(f"Uploading database to COS bucket {COS_BUCKET_NAME}")
         # Upload the file
-        with open(local_file_path, 'rb') as f:
+        with open(local_file_path, "rb") as f:
             cos_client.upload_fileobj(f, COS_BUCKET_NAME, DB_FILENAME)
         logger.info(f"Database successfully uploaded to COS bucket {COS_BUCKET_NAME}")
         return True
@@ -262,25 +275,28 @@ def upload_db_to_cos():
         logger.error(f"Error uploading database to COS: {e}")
         return False
 
+
 def collect_ten_unique_sites():
     """Collect 5 unique random sites from each source, store in DB and send to webhooks."""
     logger.info("Starting collection of unique sites")
-    
+
     # Download the database from COS first
     if not download_db_from_cos():
-        logger.error("Failed to download database from COS. Using/creating local database only.")
-    
+        logger.error(
+            "Failed to download database from COS. Using/creating local database only."
+        )
+
     # Initialize the database (now local)
     init_database()
-    
+
     sources = ["512kb.club", "indieblog.page"]
     collected_sites = []  # Store the collected sites
-    
+
     for source in sources:
         unique_sites_collected = 0
         attempts = 0
         max_attempts = 15  # Allow more attempts to find unique sites
-        
+
         logger.info(f"Collecting 5 sites from {source}")
         while unique_sites_collected < 5 and attempts < max_attempts:
             logger.info(f"Finding site {unique_sites_collected + 1}/5 from {source}...")
@@ -289,7 +305,7 @@ def collect_ten_unique_sites():
                     url, title = get_random_site()
                 else:  # indieblog.page
                     url, title = get_random_indieblog()
-                    
+
                 if not url_exists(url):
                     add_url_to_db(url, title, source)
                     collected_sites.append((url, title, source))  # Include source
@@ -309,7 +325,7 @@ def collect_ten_unique_sites():
 
     # After all operations, upload the updated database back to COS
     upload_db_to_cos()
-    
+
     # Send collected sites to webhooks if we found any
     if collected_sites:
         discord_result = send_discord_webhook(collected_sites)
