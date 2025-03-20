@@ -36,6 +36,8 @@ def adapt_datetime(dt):
 
 
 def convert_datetime(s):
+    if isinstance(s, bytes):
+        s = s.decode('utf-8')
     return datetime.fromisoformat(s)
 
 
