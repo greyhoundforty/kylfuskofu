@@ -2,7 +2,7 @@
 import os
 import sqlite3
 import time
-from datetime import datetime
+from datetime import datetime, date
 from tamga import Tamga
 import ibm_boto3
 from ibm_botocore.client import Config
