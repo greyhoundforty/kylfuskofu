@@ -11,7 +11,7 @@ This application collects random websites from multiple sources (indieblog.page 
 Fair question. I am building this little tool for a few reasons:
 
 - I learn best when I have a problem to solve and I am trying to learn more python in 2025. Two birds, one stone.
-- I love the concept of sites like https://512kb.club/ and indieblog.page, but visiting the site and clicking the `Random Site` button 20-30 times a day is annoying.
+- I love the concept of sites like https://512kb.club/ and https://indieblog.page, but visiting the site and clicking the `Random Site` button 20-30 times a day is annoying.
 - While not all sites are going to be up my alley or even in my native language, I want a way to discover more people and information outside of the traditional social media sites.
 - I want more data coming into my RSS reader and I am looking for ways to aggregate content and provide myself with more tailored feeds.
 
@@ -72,5 +72,5 @@ export DISCORD_WEBHOOK_URL=<your-discord-webhook-url>
 5. Run the application
 
 ```bash
-python cos_random_db.py
+python app.py
 ```

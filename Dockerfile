@@ -46,7 +46,7 @@ RUN pip install --upgrade pip && \
 RUN pip install playwright && \
     playwright install --with-deps chromium
 
-COPY cos_random_db.py ./cos_random_db.py
+COPY app.py ./app.py
 
 # Use Python to run the script instead of trying to execute it directly
-ENTRYPOINT ["python", "cos_random_db.py"]
+ENTRYPOINT ["python", "app.py"]
