@@ -2,7 +2,7 @@
 import os
 import sqlite3
 import time
-from datetime import datetime
+from datetime import datetime, date
 from tamga import Tamga
 import ibm_boto3
 from ibm_botocore.client import Config
@@ -13,7 +13,7 @@ logger = Tamga(logToJSON=True, logToConsole=True)
 
 # Constants for IBM COS
 COS_ENDPOINT = os.getenv("COS_ENDPOINT")
-COS_API_KEY = os.getenv("CLOUD_OBJECT_STORAGE_APIKEY")
+COS_API_KEY = os.getenv("COS_API_KEY")
 COS_INSTANCE_CRN = os.getenv("CLOUD_OBJECT_STORAGE_RESOURCE_INSTANCE_ID")
 DB_FILENAME = "random_sites.db"
 RSS_FILENAME = "random_sites.xml"
@@ -36,6 +36,8 @@ def adapt_datetime(dt):
 
 
 def convert_datetime(s):
+    if isinstance(s, bytes):
+        s = s.decode('utf-8')
     return datetime.fromisoformat(s)
 
 
