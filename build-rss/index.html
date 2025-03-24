@@ -100,7 +100,7 @@
             lastUpdated.textContent = now.toLocaleDateString() + ' ' + now.toLocaleTimeString();
 
             // Replace with your actual RSS feed URL - using the static bucket
-            const feedUrl = `https://${COS_STATIC_BUCKET_NAME}.s3.${COS_REGION}.cloud-object-storage.appdomain.cloud/${RSS_FILENAME}`;
+            const feedUrl = `https://kylfuskofu-static-rss-bucket.s3.us-south.cloud-object-storage.appdomain.cloud/kylfuskofu-static-rss-bucket/random_sites.xml`;
 
             // Add a cache buster to prevent caching
             const cacheBuster = '?_=' + new Date().getTime();
