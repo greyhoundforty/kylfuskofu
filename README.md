@@ -2,7 +2,7 @@
 
 ## Overview
 
-This application collects random websites from multiple sources (indieblog.page and 512kb.club), stores them in a SQLite database, and syncs the database with IBM Cloud Object Storage. It also sends notifications to a Discord webhook with clickable links to the discovered sites.
+This application collects random websites from multiple sources (indieblog.page, hackernews, 512kb.club), stores them in a SQLite database, and syncs the database with IBM Cloud Object Storage. It also sends notifications to a Discord webhook with clickable links to the discovered sites.
 
 ![kylfusköfu in action](https://images.gh40-dev.systems/Capto_Capture-2025-03-19_12-43-20_PM.png)
 
