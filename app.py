@@ -5,10 +5,20 @@ import json
 import time
 import httpx
 from tamga import Tamga
+from dotenv import load_dotenv
 from datetime import datetime, date
-from playwright.sync_api import sync_playwright
 import ibm_boto3
 from ibm_botocore.client import Config, ClientError
+
+# Import scrapers from utils.py
+from utils import (
+    get_random_site,
+    get_random_indieblog,
+    get_random_hackernews_stories
+)
+
+# Load environment variables
+load_dotenv()
 
 # Configure tamga logger, will set console to false after testing
 logger = Tamga(logToJSON=True, logToConsole=True)
@@ -20,7 +30,6 @@ COS_INSTANCE_CRN = os.getenv("CLOUD_OBJECT_STORAGE_RESOURCE_INSTANCE_ID")
 DB_FILENAME = "random_sites.db"
 COS_BUCKET_NAME = os.getenv("COS_BUCKET_NAME")
 
-
 # Create client
 cos_client = ibm_boto3.client(
     "s3",
@@ -29,7 +38,6 @@ cos_client = ibm_boto3.client(
     config=Config(signature_version="oauth"),
     endpoint_url=COS_ENDPOINT,
 )
-
 
 # had to add these functions to handle datetime conversion properly in updated sqlite3
 def adapt_datetime(dt):
@@ -107,60 +115,6 @@ def add_url_to_db(url, title, source):
     conn.commit()
     conn.close()
     logger.info(f"Added to database: {url} - {title} from {source}")
-
-
-def get_random_site():
-    """Get a random site from 512kb.club and return its URL and title."""
-    logger.debug("Getting random site from 512kb.club")
-    with sync_playwright() as p:
-        browser = p.chromium.launch()
-        context = browser.new_context()
-        page = context.new_page()
-        page.goto("https://512kb.club")
-
-        # Set up event listener for new pages before clicking
-        with context.expect_page() as new_page_info:
-            # Click the random button
-            page.click("a.button.random")
-
-        # Get the new page that was opened
-        new_page = new_page_info.value
-        new_page.wait_for_load_state("networkidle")
-
-        # Grab the URL and title of the new page
-        random_url = new_page.url
-        title = new_page.title()
-
-        browser.close()
-        logger.debug(f"Retrieved random site: {random_url}")
-        return random_url, title
-
-
-def get_random_indieblog():
-    """Get a random site from indieblog.page and return its URL and title."""
-    logger.debug("Getting random site from indieblog.page")
-    with sync_playwright() as p:
-        browser = p.chromium.launch()
-        context = browser.new_context()
-        page = context.new_page()
-        page.goto("https://indieblog.page/")
-
-        # Set up event listener for new pages before clicking
-        with context.expect_page() as new_page_info:
-            # Click the random button using the correct selector from HTML
-            page.click("a#stumble")
-
-        # Get the new page that was opened
-        new_page = new_page_info.value
-        new_page.wait_for_load_state("networkidle")
-
-        # Grab the URL and title of the new page
-        random_url = new_page.url
-        title = new_page.title()
-
-        browser.close()
-        logger.debug(f"Retrieved random site: {random_url}")
-        return random_url, title
 
 
 def send_discord_webhook(urls_and_titles):
@@ -276,8 +230,8 @@ def upload_db_to_cos():
         return False
 
 
-def collect_ten_unique_sites():
-    """Collect 5 unique random sites from each source, store in DB and send to webhooks."""
+def collect_unique_sites():
+    """Collect unique random sites from all sources, store in DB and send to webhook."""
     logger.info("Starting collection of unique sites")
 
     # Download the database from COS first
@@ -289,17 +243,18 @@ def collect_ten_unique_sites():
     # Initialize the database (now local)
     init_database()
 
-    sources = ["512kb.club", "indieblog.page"]
-    collected_sites = []  # Store the collected sites
-
-    for source in sources:
+    collected_sites = []  # Store all collected sites
+    
+    # Collect from traditional web scrapers (10 each instead of 5)
+    web_sources = ["512kb.club", "indieblog.page"]
+    for source in web_sources:
         unique_sites_collected = 0
         attempts = 0
-        max_attempts = 15  # Allow more attempts to find unique sites
+        max_attempts = 30  # Increased to allow for 10 sites
 
-        logger.info(f"Collecting 5 sites from {source}")
-        while unique_sites_collected < 5 and attempts < max_attempts:
-            logger.info(f"Finding site {unique_sites_collected + 1}/5 from {source}...")
+        logger.info(f"Collecting 10 sites from {source}")
+        while unique_sites_collected < 10 and attempts < max_attempts:
+            logger.info(f"Finding site {unique_sites_collected + 1}/10 from {source}...")
             try:
                 if source == "512kb.club":
                     url, title = get_random_site()
@@ -308,7 +263,7 @@ def collect_ten_unique_sites():
 
                 if not url_exists(url):
                     add_url_to_db(url, title, source)
-                    collected_sites.append((url, title, source))  # Include source
+                    collected_sites.append((url, title, source))
                     unique_sites_collected += 1
                 else:
                     logger.info(f"Site already in database: {url}")
@@ -322,6 +277,23 @@ def collect_ten_unique_sites():
         logger.info(
             f"Collection from {source} complete. Added {unique_sites_collected} new sites to database."
         )
+    
+    # Collect from Hacker News API (10 from each endpoint)
+    hn_sources = ["new", "show"]
+    for source_type in hn_sources:
+        logger.info(f"Collecting stories from Hacker News {source_type}")
+        stories = get_random_hackernews_stories(
+            source_type, 
+            count=10,
+            url_exists_func=url_exists  # Pass the function to check if URL exists
+        )
+        
+        # Add stories to database
+        for url, title, source in stories:
+            add_url_to_db(url, title, source)
+            collected_sites.append((url, title, source))
+        
+        logger.info(f"Added {len(stories)} stories from Hacker News {source_type}")
 
     # After all operations, upload the updated database back to COS
     upload_db_to_cos()
@@ -333,4 +305,4 @@ def collect_ten_unique_sites():
 
 
 if __name__ == "__main__":
-    collect_ten_unique_sites()
+    collect_unique_sites()

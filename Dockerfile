@@ -47,6 +47,7 @@ RUN pip install playwright && \
     playwright install --with-deps chromium
 
 COPY app.py ./app.py
+COPY utils.py ./utils.py
 
 # Use Python to run the script instead of trying to execute it directly
 ENTRYPOINT ["python", "app.py"]
