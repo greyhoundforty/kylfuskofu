@@ -4,6 +4,7 @@ import sqlite3
 import json
 import time
 import httpx
+import click
 from tamga import Tamga
 from dotenv import load_dotenv
 from datetime import datetime, date
@@ -14,7 +15,8 @@ from ibm_botocore.client import Config, ClientError
 from utils import (
     get_random_site,
     get_random_indieblog,
-    get_random_hackernews_stories
+    get_random_hackernews_stories,
+    get_random_linkwarden_links
 )
 
 # Load environment variables
@@ -230,15 +232,18 @@ def upload_db_to_cos():
         return False
 
 
-def collect_unique_sites():
+def collect_unique_sites(local=False):
     """Collect unique random sites from all sources, store in DB and send to webhook."""
     logger.info("Starting collection of unique sites")
 
-    # Download the database from COS first
-    if not download_db_from_cos():
-        logger.error(
-            "Failed to download database from COS. Using/creating local database only."
-        )
+    # Download the database from COS first (skip if in local mode)
+    if not local:
+        if not download_db_from_cos():
+            logger.error(
+                "Failed to download database from COS. Using/creating local database only."
+            )
+    else:
+        logger.info("Running in local mode, skipping download from COS")
 
     # Initialize the database (now local)
     init_database()
@@ -278,25 +283,47 @@ def collect_unique_sites():
             f"Collection from {source} complete. Added {unique_sites_collected} new sites to database."
         )
     
-    # Collect from Hacker News API (10 from each endpoint)
-    hn_sources = ["new", "show"]
-    for source_type in hn_sources:
-        logger.info(f"Collecting stories from Hacker News {source_type}")
-        stories = get_random_hackernews_stories(
-            source_type, 
+    # Collect from Hacker News API (Show HN only)
+    logger.info("Collecting stories from Hacker News Show HN")
+    stories = get_random_hackernews_stories(
+        count=10,
+        url_exists_func=url_exists  # Pass the function to check if URL exists
+    )
+    
+    # Add stories to database
+    for url, title, source in stories:
+        add_url_to_db(url, title, source)
+        collected_sites.append((url, title, source))
+    
+    logger.info(f"Added {len(stories)} stories from Hacker News Show HN")
+
+    # Collect from Linkwarden
+    linkwarden_api_url = os.environ.get("LINKWARDEN_API_URL", "https://docs.linkwarden.app/api/v1/links")
+    linkwarden_api_key = os.environ.get("LINKWARDEN_API_KEY", os.environ.get("LINKWARDEN_API_KEY"))
+    
+    if linkwarden_api_key:
+        logger.info("Collecting links from Linkwarden")
+        linkwarden_links = get_random_linkwarden_links(
+            api_url=linkwarden_api_url,
+            api_key=linkwarden_api_key,
             count=10,
-            url_exists_func=url_exists  # Pass the function to check if URL exists
+            url_exists_func=url_exists
         )
         
-        # Add stories to database
-        for url, title, source in stories:
+        # Add links to database
+        for url, title, source in linkwarden_links:
             add_url_to_db(url, title, source)
             collected_sites.append((url, title, source))
         
-        logger.info(f"Added {len(stories)} stories from Hacker News {source_type}")
+        logger.info(f"Added {len(linkwarden_links)} links from Linkwarden")
+    else:
+        logger.warning("Linkwarden API key not found in environment variables")
 
-    # After all operations, upload the updated database back to COS
-    upload_db_to_cos()
+    # After all operations, upload the updated database back to COS (skip if in local mode)
+    if not local:
+        upload_db_to_cos()
+    else:
+        logger.info("Running in local mode, skipping upload to COS")
 
     # Send collected sites to webhooks if we found any
     if collected_sites:
@@ -304,5 +331,14 @@ def collect_unique_sites():
         logger.info(f"Webhook results - Discord: {discord_result}")
 
 
+@click.command()
+@click.option('--local', is_flag=True, help='Run in local mode, skipping cloud storage operations')
+def main(local):
+    """Collect unique random sites and store them in a database."""
+    if local:
+        click.echo("Running in local mode (no cloud storage operations)")
+    collect_unique_sites(local=local)
+
+
 if __name__ == "__main__":
-    collect_unique_sites()
+    main()

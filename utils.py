@@ -69,19 +69,17 @@ def get_hackernews_story_ids(story_type):
     Fetch story IDs from Hacker News API.
     
     Args:
-        story_type: Either "new" or "show" to specify which endpoint to use
+        story_type: Must be "show" to specify the endpoint to use
     
     Returns:
         List of story IDs
     """
     logger.debug(f"Fetching story IDs from Hacker News {story_type}")
     
-    if story_type == "new":
-        url = "https://hacker-news.firebaseio.com/v0/newstories.json"
-    elif story_type == "show":
+    if story_type == "show":
         url = "https://hacker-news.firebaseio.com/v0/showstories.json"
     else:
-        raise ValueError(f"Invalid story type: {story_type}")
+        raise ValueError(f"Invalid story type: {story_type}, only 'show' is supported")
     
     try:
         with httpx.Client(timeout=10.0) as client:
@@ -125,18 +123,18 @@ def get_hackernews_story_details(story_id):
         return None
 
 
-def get_random_hackernews_stories(story_type, count=10, url_exists_func=None):
+def get_random_hackernews_stories(count=10, url_exists_func=None):
     """
-    Get random Hacker News stories.
+    Get random Hacker News stories from the 'Show HN' section.
     
     Args:
-        story_type: Either "new" or "show"
         count: Number of stories to retrieve (default: 10)
         url_exists_func: Function to check if URL exists in database
         
     Returns:
         List of (url, title, source) tuples
     """
+    story_type = "show"
     logger.debug(f"Getting {count} random stories from Hacker News {story_type}")
     
     source = f"hackernews-{story_type}"
@@ -181,3 +179,76 @@ def get_random_hackernews_stories(story_type, count=10, url_exists_func=None):
     
     logger.info(f"Retrieved {len(stories)} unique random stories from Hacker News {story_type}")
     return stories
+
+
+def get_random_linkwarden_links(api_url, api_key, count=10, url_exists_func=None):
+    """
+    Get random links from a Linkwarden account.
+    
+    Args:
+        api_url: The base URL for the Linkwarden API (e.g., "https://linkwarden.example.com")
+        api_key: API key or token for authentication
+        count: Number of links to retrieve (default: 10)
+        url_exists_func: Function to check if URL exists in database
+        
+    Returns:
+        List of (url, title, source) tuples
+    """
+    logger.debug(f"Getting {count} random links from Linkwarden")
+    
+    # Set up headers with authentication following the docs
+    headers = {
+        'Accept': 'application/json',
+        'Authorization': f'Bearer {api_key}'
+    }
+    
+    # Ensure we're using the correct endpoint path
+    endpoint = "/api/v1/links"
+    full_url = api_url.rstrip('/') + endpoint
+    
+    try:
+        # Fetch all bookmarks from Linkwarden
+        with httpx.Client(timeout=30.0) as client:
+            logger.debug(f"Making request to Linkwarden API: {full_url}")
+            response = client.get(full_url, headers=headers)
+            
+            # Debug information on response
+            logger.debug(f"Linkwarden API response status: {response.status_code}")
+            if response.status_code != 200:
+                logger.error(f"Linkwarden API error: {response.text}")
+                
+            response.raise_for_status()
+            all_links = response.json()
+            
+            logger.debug(f"Retrieved {len(all_links)} total links from Linkwarden")
+            
+            # Filter out links that don't have URLs or titles
+            valid_links = [
+                link for link in all_links 
+                if link.get('url') and link.get('title')
+            ]
+            
+            # If we don't have enough links, return all we have
+            if len(valid_links) <= count:
+                selected_links = valid_links
+            else:
+                # Otherwise, get a random sample
+                selected_links = random.sample(valid_links, count)
+            
+            results = []
+            for link in selected_links:
+                url = link.get('url')
+                title = link.get('title')
+                
+                # Check if this URL already exists in our database
+                if url_exists_func is None or not url_exists_func(url):
+                    results.append((url, title, "linkwarden"))
+                else:
+                    logger.debug(f"Link URL already in database: {url}")
+                    
+            logger.info(f"Retrieved {len(results)} unique random links from Linkwarden")
+            return results
+                
+    except Exception as e:
+        logger.error(f"Error fetching links from Linkwarden: {e}")
+        return []
