@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Catalog</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+    <link rel="stylesheet" href="https://unpkg.com/carbon-components/css/carbon-components.min.css">
+</head>
+<body>
+    {% include 'base.html' %}
+
+    {% extends 'base.html' %}
+
+    {% block content %}
+    <div class="bx--grid">
+        <div class="bx--row">
+            <div class="bx--col">
+                <h1>Web Catalog</h1>
+                <p class="bx--type-body-long-01">Exploring the best of the web across different communities</p>
+            </div>
+        </div>
+
+        <div class="bx--row" style="margin-top: 2rem;">
+            <!-- Hacker News Column -->
+            <div class="bx--col-lg-4 bx--col-md-4 bx--col-sm-12">
+                <div class="bx--tile">
+                    <h2>Hacker News</h2>
+                    <p class="bx--type-body-short-01">Tech news from the hacker community</p>
+                </div>
+
+                {% for entry in hackernews_entries %}
+                    <div class="bx--tile" style="margin-top: 1rem;">
+                        <h3>{{ entry.title }}</h3>
+                        <p class="bx--type-caption-01">{{ entry.capture_date }}</p>
+                        <a href="{{ entry.url }}" target="_blank" class="bx--link">Visit Site</a>
+                    </div>
+                {% else %}
+                    <div class="bx--tile" style="margin-top: 1rem;">
+                        <p>No Hacker News entries found</p>
+                    </div>
+                {% endfor %}
+            </div>
+
+            <!-- indieblog.page Column -->
+            <div class="bx--col-lg-4 bx--col-md-4 bx--col-sm-12">
+                <div class="bx--tile">
+                    <h2>indieblog.page</h2>
+                    <p class="bx--type-body-short-01">Independent bloggers and writers</p>
+                </div>
+
+                {% for entry in indieblog_entries %}
+                    <div class="bx--tile" style="margin-top: 1rem;">
+                        <h3>{{ entry.title }}</h3>
+                        <p class="bx--type-caption-01">{{ entry.capture_date }}</p>
+                        <a href="{{ entry.url }}" target="_blank" class="bx--link">Visit Site</a>
+                    </div>
+                {% else %}
+                    <div class="bx--tile" style="margin-top: 1rem;">
+                        <p>No indieblog.page entries found</p>
+                    </div>
+                {% endfor %}
+            </div>
+
+            <!-- 512kb Club Column -->
+            <div class="bx--col-lg-4 bx--col-md-4 bx--col-sm-12">
+                <div class="bx--tile">
+                    <h2>512kb Club</h2>
+                    <p class="bx--type-body-short-01">Lightweight, performance-focused websites</p>
+                </div>
+
+                {% for entry in kb512_entries %}
+                    <div class="bx--tile" style="margin-top: 1rem;">
+                        <h3>{{ entry.title }}</h3>
+                        <p class="bx--type-caption-01">{{ entry.capture_date }}</p>
+                        <a href="{{ entry.url }}" target="_blank" class="bx--link">Visit Site</a>
+                    </div>
+                {% else %}
+                    <div class="bx--tile" style="margin-top: 1rem;">
+                        <p>No 512kb Club entries found</p>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endblock %}
+
+    <script src="https://unpkg.com/carbon-components/scripts/carbon-components.min.js"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
