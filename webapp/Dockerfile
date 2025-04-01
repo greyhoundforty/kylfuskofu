@@ -3,16 +3,17 @@ FROM python:3.12-slim AS builder
 
 WORKDIR /app
 
-# Install UV
+# Install UV globally
 RUN pip install uv
 
 # Copy requirements
 COPY requirements.txt .
 
-# Use UV to install dependencies into a virtual environment
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+# Use the global UV to create a virtual environment
 RUN uv venv /app/venv
-RUN /app/venv/bin/uv pip install -r requirements.txt
+
+# Use the global UV command to install requirements into the venv
+RUN uv pip install --python /app/venv/bin/python -r requirements.txt
 
 # Final stage
 FROM python:3.12-slim
