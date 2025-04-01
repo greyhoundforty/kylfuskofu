@@ -32,8 +32,6 @@ Fair question. I am building this little tool for a few reasons:
 ### Prerequisites
 
 - Python 3.12+
-- Docker (for containerized deployment)
-- IBM Cloud account (for Object Storage / Code Engine)
 - Discord webhook URL (for notifications)
 
 ### Setup
@@ -62,14 +60,33 @@ playwright install chromium
 4. Ensure environment variables are set:
 
 ```bash
+export DISCORD_WEBHOOK_URL=<your-discord-webhook-url>
+```
+
+5. Run the application using a local sqlitedb file
+
+```bash
+python app.py --local
+```
+
+## Run with remote DB file
+
+To persist data across runs, you can use a remote SQLite database file. This is useful for running the application in a containerized environment. In this case we will use IBM Cloud Object Storage (COS) to store the SQLite database file.
+
+### Prerequisites
+
+- IBM Cloud Object Storage instance
+
+You will need to create a bucket in IBM Cloud Object Storage and set the following environment variables before running the application:
+
+```bash
 export COS_ENDPOINT=<your-cos-endpoint>
 export COS_API_KEY=<your-cos-api-key>
 export COS_INSTANCE_CRN=<your-cos-instance-crn>
 export COS_BUCKET_NAME=<your-bucket-name>
-export DISCORD_WEBHOOK_URL=<your-discord-webhook-url>
 ```
 
-5. Run the application
+### Run the application
 
 ```bash
 python app.py
