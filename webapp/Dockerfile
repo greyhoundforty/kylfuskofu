@@ -10,6 +10,7 @@ RUN pip install uv
 COPY requirements.txt .
 
 # Use UV to install dependencies into a virtual environment
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 RUN uv venv /app/venv
 RUN /app/venv/bin/uv pip install -r requirements.txt
 
@@ -27,6 +28,7 @@ COPY . .
 # Set environment variables
 ENV PATH="/app/venv/bin:$PATH"
 ENV FLASK_APP=run.py
+ENV DATABASE="/mnt/ext-bucket/catalog.db"
 
 # Create non-root user
 RUN useradd -m appuser

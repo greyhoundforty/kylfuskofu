@@ -32,8 +32,50 @@ def close_db(e=None):
         db.close()
 
 
+# Add to the init_app function
+
+
 def init_app(app):
     app.teardown_appcontext(close_db)
+
+    # Check if database directory exists and is writable
+    db_path = app.config["DATABASE"]
+    db_dir = os.path.dirname(db_path)
+
+    if not os.path.exists(db_dir):
+        logger.warning(
+            f"Database directory {db_dir} does not exist, attempting to create"
+        )
+        try:
+            os.makedirs(db_dir, exist_ok=True)
+        except Exception as e:
+            logger.error(f"Failed to create database directory: {str(e)}")
+
+    # Check if we can connect to the database
+    try:
+        with app.app_context():
+            db = get_db()
+            # Check if sites table exists
+            tables = db.execute(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name='sites'"
+            ).fetchall()
+            if not tables:
+                logger.warning("Sites table not found, creating schema")
+                db.execute(
+                    """
+                CREATE TABLE IF NOT EXISTS sites (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    url TEXT UNIQUE,
+                    title TEXT,
+                    source TEXT,
+                    capture_date TIMESTAMP
+                )
+                """
+                )
+                db.commit()
+            logger.info(f"Successfully connected to database at {db_path}")
+    except Exception as e:
+        logger.error(f"Failed to initialize database: {str(e)}")
 
 
 def get_random_entries(count):
