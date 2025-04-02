@@ -29,12 +29,12 @@ COPY . .
 # Set environment variables
 ENV PATH="/app/venv/bin:$PATH"
 ENV FLASK_APP=run.py
-ENV DATABASE="/mnt/ext-bucket/catalog.db"
+ENV DATABASE="/app/instance/catalog.db"
 
-# Create non-root user
-RUN useradd -m appuser
-RUN chown -R appuser:appuser /app
-USER appuser
+# # Create non-root user
+# RUN useradd -m appuser
+# RUN chown -R appuser:appuser /app
+# USER appuser
 
 # Run the application
 EXPOSE 5000

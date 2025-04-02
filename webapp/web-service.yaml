@@ -1,0 +1,18 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: nginx
+spec:
+  template:
+    spec:
+      containers:
+        - image: nginx:latest
+          ports:
+            - containerPort: 80
+          volumeMounts:
+            - name: cos-mount
+              mountPath: /app/instance/catalog.db
+      volumes:
+        - name: cos-mount
+          persistentVolumeClaim:
+            claimName: bucket-1oyizj6mwu9fryo-random-sites-app
