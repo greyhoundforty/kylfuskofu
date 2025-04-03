@@ -4,7 +4,7 @@
 
 This application collects random websites from multiple sources (indieblog.page, hackernews, 512kb.club), stores them in a SQLite database, and syncs the database with IBM Cloud Object Storage. It also sends notifications to a Discord webhook with clickable links to the discovered sites.
 
-![kylfusköfu in action](https://images.gh40-dev.systems/Capto_Capture-2025-03-19_12-43-20_PM.png)
+![kylfusköfu in action](./kylf-screenshot.png)
 
 ### But why?
 
@@ -84,6 +84,7 @@ export COS_ENDPOINT=<your-cos-endpoint>
 export COS_API_KEY=<your-cos-api-key>
 export COS_INSTANCE_CRN=<your-cos-instance-crn>
 export COS_BUCKET_NAME=<your-bucket-name>
+export DISCORD_WEBHOOK_URL=<your-discord-webhook-url>
 ```
 
 ### Run the application
