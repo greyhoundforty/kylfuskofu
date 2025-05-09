@@ -50,5 +50,5 @@ sqlalchemy==2.0.40
 tamga==0.1.14
 typing-extensions==4.13.0
 urllib3==2.3.0
-virtualenv==20.29.3
+virtualenv==20.31.2
 werkzeug==3.1.3
