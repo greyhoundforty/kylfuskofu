@@ -19,7 +19,7 @@ httpx==0.28.1
 ibm-cos-sdk==2.14.0
 ibm-cos-sdk-core==2.14.0
 ibm-cos-sdk-s3transfer==2.14.0
-identify==2.6.9
+identify==2.6.12
 idna==3.10
 iniconfig==2.1.0
 itsdangerous==2.2.0
