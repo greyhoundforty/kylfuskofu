@@ -6,6 +6,8 @@ This application collects random websites from multiple sources and stores them 
 
 ![kylfusköfu in action](./scraper-discord-output.png)
 
+---
+
 ## Features
 
 ### 🌐 Multi-Source Web Discovery
