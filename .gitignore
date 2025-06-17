@@ -1,9 +1,11 @@
 # Log file
 tamga.json
 
+scraped_sites_*.md
+
 # sqlitedb
 random_sites.db
-
+*.db
 ###------------------###
 ###  GitHub: Python  ###
 ###------------------###

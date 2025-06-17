@@ -2,30 +2,78 @@
 
 ## Overview
 
-This application collects random websites from multiple sources (indieblog.page, hackernews, 512kb.club), stores them in a SQLite database, and syncs the database with IBM Cloud Object Storage. It also sends notifications to a Discord webhook with clickable links to the discovered sites.
+This application collects random websites from multiple sources and stores them in a SQLite database with intelligent content filtering. The tool focuses on discovering English-language content from the small web and indie blog communities, then syncs the database with IBM Cloud Object Storage and sends notifications via Discord webhook.
 
-![kylfusköfu in action](https://images.gh40-dev.systems/Capto_Capture-2025-03-19_12-43-20_PM.png)
+![kylfusköfu in action](./scraper-discord-output.png)
 
-### But why?
+## Features
 
-Fair question. I am building this little tool for a few reasons:
+### 🌐 Multi-Source Web Discovery
+- **512KB Club Sites**: Discovers and filters English-language websites from the small web community
+- **Hacker News**: Collects stories from both "Show HN" and "New" sections
+- **IndieWeb Blogs**: Curates random posts from independent bloggers
+- **Smart Deduplication**: Prevents collecting the same URLs multiple times
 
-- I learn best when I have a problem to solve and I am trying to learn more python in 2025. Two birds, one stone.
-- I love the concept of sites like https://512kb.club/ and https://indieblog.page, but visiting the site and clicking the `Random Site` button 20-30 times a day is annoying.
-- While not all sites are going to be up my alley or even in my native language, I want a way to discover more people and information outside of the traditional social media sites.
-- I want more data coming into my RSS reader and I am looking for ways to aggregate content and provide myself with more tailored feeds.
+### 🤖 Intelligent Content Filtering
+- **English Detection**: Automatically identifies English-language 512KB Club sites using multiple detection methods:
+  - HTML `lang` attribute analysis
+  - Title and navigation text analysis
+  - Content sampling for English word patterns
+  - Smart fallback mechanisms
+- **Quality Control**: Filters out non-English sites to improve content relevance
 
-### Current Status
+### 📊 Data Management
+- **SQLite Database**: Local storage with enhanced schema for language detection
+- **Cloud Sync**: Automatic backup to IBM Cloud Object Storage
+- **Markdown Reports**: Generates timestamped markdown files with organized site collections
 
-- [x] It scrapes!
-- [x] It runs on a schedule
-- [x] It sends a webhook
+### 🔔 Notifications
+- **Discord Integration**: Sends organized webhooks with clickable links grouped by source
 
-### Future Plans
+## Why This Tool?
 
-- [ ] Add Code Engine deployment instructions
-- [ ] Add more sources
-- [ ] Build RSS feed from daily links (possibly hosted on GH)
+- **Learning Python**: Practical problem-solving approach to language learning
+- **Small Web Discovery**: Automated way to find content from 512kb.club and indieblog.page without manual clicking
+- **RSS Feed Preparation**: Building towards curated content feeds outside traditional social media
+- **Content Aggregation**: Discovering diverse voices and information sources
+
+## Current Status
+
+- [x] Multi-source scraping with intelligent filtering
+- [x] English language detection for 512KB Club sites
+- [x] Enhanced database schema with language analysis
+- [x] Markdown report generation
+- [x] Discord webhook notifications
+- [x] Cloud database synchronization
+- [x] Comprehensive logging and error handling
+
+## Future Plans
+
+- [ ] Anthropic API integration for content summarization
+- [ ] RSS feed generation from collected sites
+- [ ] Code Engine deployment instructions
+- [ ] Additional content sources
+- [ ] Web interface for browsing collected sites
+
+## CLI Usage
+
+### Basic Collection
+```bash
+# Run full collection with cloud sync
+python app.py
+
+# Run in local mode (no cloud storage)
+python app.py --local
+```
+
+### Analysis & Reports
+```bash
+# Analyze existing 512KB sites for English language
+python app.py --analyze-english
+
+# Generate markdown report from existing database
+python app.py --generate-markdown
+```
 
 ## Testing Locally
 
@@ -57,33 +105,34 @@ pip install -r requirements.txt
 playwright install chromium
 ```
 
-4. Ensure environment variables are set:
+4. Set up environment variables:
 
 ```bash
 export DISCORD_WEBHOOK_URL=<your-discord-webhook-url>
 ```
 
-5. Run the application using a local sqlitedb file
+5. Run the application using a local SQLite database
 
 ```bash
 python app.py --local
 ```
 
-## Run with remote DB file
+## Production Setup with Remote Database
 
-To persist data across runs, you can use a remote SQLite database file. This is useful for running the application in a containerized environment. In this case we will use IBM Cloud Object Storage (COS) to store the SQLite database file.
+To persist data across runs and deployments, configure IBM Cloud Object Storage for database synchronization.
 
 ### Prerequisites
 
-- IBM Cloud Object Storage instance
+- IBM Cloud Object Storage instance with a dedicated bucket
 
-You will need to create a bucket in IBM Cloud Object Storage and set the following environment variables before running the application:
+### Environment Variables
 
 ```bash
 export COS_ENDPOINT=<your-cos-endpoint>
 export COS_API_KEY=<your-cos-api-key>
 export COS_INSTANCE_CRN=<your-cos-instance-crn>
 export COS_BUCKET_NAME=<your-bucket-name>
+export DISCORD_WEBHOOK_URL=<your-discord-webhook-url>
 ```
 
 ### Run the application
@@ -91,3 +140,87 @@ export COS_BUCKET_NAME=<your-bucket-name>
 ```bash
 python app.py
 ```
+
+## How It Works
+
+### 512KB Club English Detection
+The tool uses a multi-layered approach to identify English-language sites:
+
+1. **HTML Language Attribute**: Checks for `lang="en"` or similar attributes
+2. **Title Analysis**: Scans page titles for common English words
+3. **Content Sampling**: Analyzes page text for English word patterns
+4. **Navigation Analysis**: Examines menu items for English navigation terms
+
+### Content Collection Process
+1. **Site Discovery**: Collects random sites from each source
+2. **Language Filtering**: (512KB Club only) Determines if content is English
+3. **Deduplication**: Checks against existing database entries
+4. **Database Storage**: Saves with metadata including language analysis results
+5. **Markdown Generation**: Creates organized reports by source
+6. **Notifications**: Sends Discord webhooks with collected sites
+
+### Database Schema
+The enhanced SQLite schema includes:
+- Basic site information (URL, title, source, capture date)
+- Language analysis fields (detection results, status, check timestamp)
+- Flexible markdown storage for future content summarization
+
+## Development
+
+### Code Quality
+The project uses pre-commit hooks for code quality:
+- **Black**: Code formatting
+- **Pylint**: Code analysis and linting
+- **Standard hooks**: Trailing whitespace, YAML validation, merge conflict detection
+
+### Install development dependencies
+```bash
+pip install -r requirements.txt
+pre-commit install
+```
+
+### Run code quality checks
+```bash
+# Run all pre-commit hooks
+pre-commit run --all-files
+
+# Run specific checks
+black .
+pylint app.py utils.py
+```
+
+## Output Examples
+
+### Markdown Report Format
+```markdown
+## 512KB Club Sites
+
+- [Example Personal Site](https://example.com)
+- [Developer Portfolio](https://dev.example.com)
+
+## Hacker News - Show HN
+
+- [Show HN: My new project](https://news.ycombinator.com/item?id=123456)
+
+## Hacker News - New Stories
+
+- [Interesting tech article](https://techsite.example.com)
+
+## IndieWeb Blogs
+
+- [Personal blog post](https://blog.example.com/post1)
+- [Indie writer thoughts](https://writer.example.com/post2)
+```
+
+### Discord Webhook
+Organized embeds grouped by source with clickable links and clean formatting.
+
+## Troubleshooting
+
+### Common Issues
+- **No 512KB sites in output**: Sites may not be detected as English. Check logs for detection details.
+- **Import errors**: Ensure all dependencies are installed and virtual environment is activated.
+- **Cloud storage errors**: Verify IBM COS credentials and bucket permissions.
+
+### Debugging
+Enable detailed logging by checking the Tamga logger output for step-by-step processing information.
