@@ -145,27 +145,9 @@ python app.py
 
 ## How It Works
 
-### 512KB Club English Detection
-The tool uses a multi-layered approach to identify English-language sites:
+![code diagram](./diagram.png)
 
-1. **HTML Language Attribute**: Checks for `lang="en"` or similar attributes
-2. **Title Analysis**: Scans page titles for common English words
-3. **Content Sampling**: Analyzes page text for English word patterns
-4. **Navigation Analysis**: Examines menu items for English navigation terms
-
-### Content Collection Process
-1. **Site Discovery**: Collects random sites from each source
-2. **Language Filtering**: (512KB Club only) Determines if content is English
-3. **Deduplication**: Checks against existing database entries
-4. **Database Storage**: Saves with metadata including language analysis results
-5. **Markdown Generation**: Creates organized reports by source
-6. **Notifications**: Sends Discord webhooks with collected sites
-
-### Database Schema
-The enhanced SQLite schema includes:
-- Basic site information (URL, title, source, capture date)
-- Language analysis fields (detection results, status, check timestamp)
-- Flexible markdown storage for future content summarization
+> Code diagram courtesy of the awesome [GitDiagram](https://gitdiagram.com/).
 
 ## Development
 

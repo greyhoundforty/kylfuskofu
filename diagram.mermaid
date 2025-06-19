@@ -1,0 +1,58 @@
+flowchart TB
+    %% External Data Sources
+    subgraph "External Data Sources"
+        Indie["indieblog.page"]:::external
+        Hack["hackernews"]:::external
+        KB["512kb.club"]:::external
+    end
+
+    %% Backend Modules
+    Scraper_Scheduler["Scraper & Scheduler"]:::backend
+    Local_DB["Local SQLite Database"]:::db
+    IBM_COS["IBM Cloud Object Storage"]:::cloud
+    Discord["Discord Webhook Notification"]:::cloud
+
+    %% Frontend Module
+    Web_UI["Web UI Application"]:::frontend
+
+    %% Deployment & Testing
+    Containers["Containerization & Deployment"]:::container
+    Tests["Testing (Web UI)"]:::test
+
+    %% Data Flows - Scraper interacting with External Sources
+    Scraper_Scheduler -->|"scrapes"| Indie
+    Scraper_Scheduler -->|"scrapes"| Hack
+    Scraper_Scheduler -->|"scrapes"| KB
+
+    %% Backend flows
+    Scraper_Scheduler -->|"stores"| Local_DB
+    Local_DB -->|"syncs"| IBM_COS
+    Scraper_Scheduler -->|"notifies"| Discord
+
+    %% Frontend interaction
+    Local_DB -->|"serves_data"| Web_UI
+
+    %% Deployment relations
+    Containers -->|"deploys"| Scraper_Scheduler
+    Containers -->|"deploys"| Web_UI
+
+    %% Testing relation
+    Tests -->|"tests"| Web_UI
+
+    %% Click Events
+    click Scraper_Scheduler "https://github.com/greyhoundforty/kylfuskofu/blob/main/app.py"
+    click Scraper_Scheduler "https://github.com/greyhoundforty/kylfuskofu/blob/main/utils.py"
+    click Local_DB "https://github.com/greyhoundforty/kylfuskofu/blob/main/webapp/app/database.py"
+    click Web_UI "https://github.com/greyhoundforty/kylfuskofu/tree/main/webapp/app"
+    click Containers "https://github.com/greyhoundforty/kylfuskofu/tree/main/Dockerfile"
+    click Containers "https://github.com/greyhoundforty/kylfuskofu/tree/main/webapp/Dockerfile"
+    click Tests "https://github.com/greyhoundforty/kylfuskofu/tree/main/webapp/tests"
+
+    %% Styles
+    classDef backend fill:#ADD8E6,stroke:#000,stroke-width:2px;
+    classDef frontend fill:#98FB98,stroke:#000,stroke-width:2px;
+    classDef db fill:#FFD700,stroke:#000,stroke-width:2px;
+    classDef external fill:#FFA07A,stroke:#000,stroke-width:2px;
+    classDef cloud fill:#87CEFA,stroke:#000,stroke-width:2px;
+    classDef container fill:#90EE90,stroke:#000,stroke-width:2px;
+    classDef test fill:#DDA0DD,stroke:#000,stroke-width:2px;
